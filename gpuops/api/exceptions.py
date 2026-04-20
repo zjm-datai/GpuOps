@@ -1,5 +1,23 @@
 
 from fastapi import status
+from pydantic import BaseModel
+
+class ErrorResponse(BaseModel):
+    code: int
+    reason: str
+    message: str
+
+error_responses = {
+    404: {"model": ErrorResponse},
+    409: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    400: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+    503: {"model": ErrorResponse},
+}
+
 
 class HTTPException(Exception):
     def __init__(self, status_code: int, reason: str, message: str):

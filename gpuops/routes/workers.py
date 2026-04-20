@@ -1,14 +1,18 @@
 
 import logging
-from fastapi import APIRouter
+from typing import Optional
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 
-from gpuops.schemas.workers import WorkerCreate
+from gpuops.schemas.workers import WorkerCreate, WorkerPublic, WorkerListParams
 from gpuops.server.db import async_session
+from gpuops.worker.worker import Worker
 
 
 router = APIRouter()
 system_name_prefix = "system/worker"
 logger = logging.getLogger(__name__)
+
 
 @router.post("", response_model=WorkerRegistrationPublic)
 async def create_worker(user: CurrentUserDep, worker_in: WorkerCreate):

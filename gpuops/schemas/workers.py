@@ -1,6 +1,7 @@
 
+from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -17,7 +18,7 @@ from sqlmodel import (
 
 from sqlalchemy import String
 
-from gpuops.schemas.common import pydantic_column_type
+from gpuops.schemas.common import ListParams, PaginatedList, UTCDateTime, pydantic_column_type
 from gpuops.schemas.config import (
     PredefinedConfigNoDefaults,
     ModelInstanceProxyModeEnum,
@@ -299,3 +300,37 @@ class WorkerCreate(WorkerUpdate, WorkerStatusStored):
     worker_version: Optional[str] = Field(
         default=None, sa_column=Column(String(100), nullable=True)
     )
+    
+class WorkerBase(WorkerCreate):
+    state: WorkerStateEnum = WorkerStateEnum.NOT_READY
+    heartbeat_time: Optional[datetime] = Field(
+        sa_column=Column(UTCDateTime), default=None
+    )
+    unreachable: bool = False
+    
+class WorkerListParams(ListParams):
+    sortable_fields: ClassVar[List[str]] = [
+        "name",
+        "state",
+        "ip",
+        "status.cpu.utilization_rate",
+        "status.memory.utilization_rate",
+        "gpus",  # gpu count, the same naming pattern as in Clusters
+        "created_at",
+        "updated_at",
+    ]
+    
+class WorkerPublic(
+    WorkerBase,
+):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    me: Optional[bool] = None  # Indicates if the worker is the current worker
+    provision_progress: Optional[str] = None  # Indicates the provisioning progress
+
+    worker_uuid: Optional[str] = Field(default=None, exclude=True)
+    machine_id: Optional[str] = Field(default=None, exclude=True)
+    
+
+WorkersPublic = PaginatedList[WorkerPublic]
