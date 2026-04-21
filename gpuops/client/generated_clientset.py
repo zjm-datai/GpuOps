@@ -2,9 +2,9 @@ import base64
 from urllib.parse import urlparse
 from .generated_http_client import HTTPClient
 from typing import Optional
-{% for class_name in class_names %}
-from .generated_{{ class_name | to_snake_case }}_client import {{ class_name }}Client
-{%- endfor %}
+
+from .generated_worker_client import WorkerClient
+from .generated_user_client import UserClient
 
 from gpuops.utils.network import use_proxy_env_for_url
 
@@ -43,16 +43,19 @@ class ClientSet:
         http_client = (
             HTTPClient(
                 base_url=base_url,
-                verify_ssl=verify,
+                verify_ssl=verify, # type: ignore
                 httpx_args={"trust_env": use_proxy_env},
             )
             .with_headers(headers)
-            .with_timeout(timeout)
+            .with_timeout(timeout) # type: ignore
         )
         self.http_client = http_client
-{% for class_name in class_names %}
-        self.{{ class_name | to_underscore_plural }} = {{ class_name }}Client(
+
+        self.workers = WorkerClient(
             http_client,
             enable_cache=enable_cache,
         )
-{%- endfor %}{{ "\n" }}
+        self.users = UserClient(
+            http_client,
+            enable_cache=enable_cache,
+        )

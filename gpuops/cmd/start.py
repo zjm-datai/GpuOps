@@ -6,11 +6,26 @@ import logging
 import multiprocessing
 import sys
 
+from gpuops import __version__, __git_commit__
 from gpuops.config.config import Config
+from gpuops.logging import setup_logging
+from gpuops.utils.envs import get_gpuops_env, get_gpuops_env_bool
 from gpuops.worker.worker import Worker
+from gpuops.server.server import Server
 
 logger = logging.getLogger(__name__)
 
+class OptionalBoolAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(OptionalBoolAction, self).__init__(
+            option_strings, dest, nargs=0, **kwargs
+        )
+        self.default = kwargs.get("default")
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, True)
 
 def setup_start_cmd(subparsers: argparse._SubParsersAction):
     parser_server: argparse.ArgumentParser = subparsers.add_parser(
@@ -159,6 +174,8 @@ def run(args: argparse.Namespace):
     try:
         cfg = parse_args(args)
         setup_logging(cfg.debug)
+        
+        multiprocessing.set_start_method('spawn')
         
         logger.info(f"GPUOps version: {__version__} ({__git_commit__})")
         

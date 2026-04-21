@@ -1,8 +1,17 @@
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import SQLModel, select
 
+from gpuops.server.bus import Event, EventType, event_bus
+
+class CommitEvent:
+    name: str
+    event: Event
+
+    def __init__(self, name: str, type: EventType, data: Any):
+        self.name = name
+        self.event = Event(type=type, data=data)
 
 class ActiveRecordMixin:
     """ActiveRecordMixin provides a set of methods to interact with the database."""
@@ -89,3 +98,47 @@ class ActiveRecordMixin:
 
         result = await session.exec(statement)
         return result.all()
+    
+    @classmethod
+    def convert_without_saving(
+        cls, source: Union[dict, SQLModel], update: Optional[dict] = None
+    ) -> SQLModel:
+        """
+        Convert the source to the model without saving to the database.
+        Return None if failed.
+        """
+
+        if isinstance(source, cls):
+            obj = source
+            if update:
+                for k, v in update.items():
+                    setattr(obj, k, v)
+        elif isinstance(source, SQLModel):
+            obj = cls.from_orm(source, update=update) # type: ignore
+        elif isinstance(source, dict):
+            obj = cls.parse_obj(source, update=update) # type: ignore
+        return obj # type: ignore
+    
+    @classmethod
+    def _publish_event_after_commit(
+        cls, session: AsyncSession, event_type: str, data: Any
+    ):
+        session.info.setdefault("pending_events", []).append(
+            CommitEvent(
+                name=cls.__name__.lower(),
+                type=event_type, # type: ignore
+                data=data,
+            )
+        )
+    
+    @classmethod
+    async def create(
+        cls, session: AsyncSession, source: Union[dict, SQLModel], update: Optional[dict] = None, auto_commit: bool = True
+    ):
+        obj = cls.convert_without_saving(source, update)
+        if obj is None:
+            return None
+
+        cls._publish_event_after_commit(session, EventType.CREATED, obj) # type: ignore
+        await obj.save(session, auto_commit=auto_commit) # type: ignore
+        return obj

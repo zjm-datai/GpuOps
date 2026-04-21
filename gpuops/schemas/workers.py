@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import ClassVar, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from sqlmodel import (
     Field,
@@ -278,6 +278,9 @@ class WorkerStatusStored(BaseModel):
     proxy_mode: Optional[ModelInstanceProxyModeEnum] = Field(
         default=ModelInstanceProxyModeEnum.WORKER,
     )
+
+class WorkerStatusPublic(WorkerStatusStored):
+    pass
         
 class WorkerUpdate(SQLModel):
     """
@@ -331,6 +334,10 @@ class WorkerPublic(
 
     worker_uuid: Optional[str] = Field(default=None, exclude=True)
     machine_id: Optional[str] = Field(default=None, exclude=True)
-    
+
+class WorkerRegistrationPublic(WorkerPublic):
+    token: str
+    worker_uuid: str
+    worker_config: Optional["PredefinedConfigNoDefaults"] = None
 
 WorkersPublic = PaginatedList[WorkerPublic]

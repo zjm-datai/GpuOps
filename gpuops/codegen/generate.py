@@ -11,9 +11,6 @@ def main():
     cfg = Config(
         class_names=[
             "Worker",
-            "Model",
-            "ModelInstance",
-            "ModelFile",
             "User",
         ]
     )
@@ -36,8 +33,8 @@ def main():
 @dataclass
 class Config:
     template_dir: str = os.path.join(os.path.dirname(__file__), "templates")
-    output_dir: str = "gpustack/client"
-    class_names: List[str] = None
+    output_dir: str = "gpuops/client"
+    class_names: List[str] = None # type: ignore
 
 
 def gen_clients(env: Environment, cfg: Config):

@@ -18,12 +18,12 @@ from .generated_http_client import HTTPClient
 logger = logging.getLogger(__name__)
 
 
-class {{ class_name }}Client:
+class WorkerClient:
     def __init__(self, client: HTTPClient, enable_cache: bool = True):
         self._client = client
-        self._url = "/{{ class_name | to_dash_plural }}"
+        self._url = "/workers"
         self._enable_cache = enable_cache
-        self._cache: Dict[int, {{ class_name }}Public] = {}
+        self._cache: Dict[int, WorkerPublic] = {}
         self._cache_lock = None
         self._watch_started = False
         self._initial_sync_logged = False
@@ -36,7 +36,7 @@ class {{ class_name }}Client:
 
     def list(
         self, params: Dict[str, Any] = None, use_cache: bool = True
-    ) -> {{ class_name | to_plural }}Public:
+    ) -> WorkersPublic:
         """
         List resources.
 
@@ -69,9 +69,9 @@ class {{ class_name }}Client:
         response = self._client.get_httpx_client().get(self._url, params=params)
         raise_if_response_error(response)
 
-        return {{ class_name | to_plural }}Public.model_validate(response.json())
+        return WorkersPublic.model_validate(response.json())
 
-    def _list_from_cache(self, params: Dict[str, Any] = None) -> {{ class_name | to_plural }}Public:
+    def _list_from_cache(self, params: Dict[str, Any] = None) -> WorkersPublic:
         """
         List resources from cache instead of making an API call.
 
@@ -111,7 +111,7 @@ class {{ class_name }}Client:
             totalPage=1 if total > 0 else 0,
         )
 
-        return {{ class_name | to_plural }}Public(items=all_items, total=total, pagination=pagination)
+        return WorkersPublic(items=all_items, total=total, pagination=pagination)
 
     def _update_cache_from_event(self, event: Event):
         """Update cache based on received event."""
@@ -119,19 +119,19 @@ class {{ class_name }}Client:
             return
 
         try:
-            item = {{ class_name }}Public.model_validate(event.data)
+            item = WorkerPublic.model_validate(event.data)
             if not hasattr(item, 'id'):
                 return
 
             with self._get_cache_lock():
                 if event.type == EventType.DELETED:
                     self._cache.pop(item.id, None)
-                    logger.debug(f"Cache: removed {{ class_name | lower }} {item.id}")
+                    logger.debug(f"Cache: removed worker {item.id}")
                 else:  # CREATED or UPDATED
                     self._cache[item.id] = item
-                    logger.trace(f"Cache: updated {{ class_name | lower }} {item.id}")
+                    logger.trace(f"Cache: updated worker {item.id}")
         except Exception as e:
-            logger.error(f"Failed to update {{ class_name | to_dash_plural }} cache from event: {e}")
+            logger.error(f"Failed to update workers cache from event: {e}")
 
     def watch(
         self,
@@ -178,7 +178,7 @@ class {{ class_name }}Client:
         # This enables list()/get() to use cache automatically
         if self._enable_cache and not self._watch_started:
             self._watch_started = True
-            logger.debug(f"{{ class_name | to_dash_plural }} cache watch started")
+            logger.debug(f"workers cache watch started")
 
         async with self._client.get_async_httpx_client().stream(
             "GET",
@@ -211,7 +211,7 @@ class {{ class_name }}Client:
                                     # Set a flag to avoid repeated logging
                                     self._initial_sync_logged = True
                                     logger.debug(
-                                        f"{{ class_name | to_dash_plural }} cache populated with {cache_size} items"
+                                        f"workers cache populated with {cache_size} items"
                                     )
 
                         if callback:
@@ -224,7 +224,7 @@ class {{ class_name }}Client:
                 except asyncio.TimeoutError:
                     raise Exception("watch timeout")
 
-    def get(self, id: int, use_cache: bool = True) -> {{ class_name }}Public:
+    def get(self, id: int, use_cache: bool = True) -> WorkerPublic:
         """
         Get a resource by ID.
 
@@ -243,13 +243,13 @@ class {{ class_name }}Client:
         if should_use_cache:
             with self._get_cache_lock():
                 if id in self._cache:
-                    logger.trace(f"Cache hit for {{ class_name | lower }} {id}")
+                    logger.trace(f"Cache hit for worker {id}")
                     return self._cache[id]
 
         # Fall back to API call
         response = self._client.get_httpx_client().get(f"{self._url}/{id}")
         raise_if_response_error(response)
-        result = {{ class_name }}Public.model_validate(response.json())
+        result = WorkerPublic.model_validate(response.json())
 
         # Update cache if enabled
         if self._enable_cache:
@@ -258,25 +258,24 @@ class {{ class_name }}Client:
 
         return result
 
-    def create(self, model_create: {{ class_name }}Create):
+    def create(self, model_create: WorkerCreate):
         response = self._client.get_httpx_client().post(
             self._url,
             content=model_create.model_dump_json(),
             headers={"Content-Type": "application/json"},
         )
         raise_if_response_error(response)
-        return {{ class_name }}Public.model_validate(response.json())
+        return WorkerPublic.model_validate(response.json())
 
-    def update(self, id: int, model_update: {{ class_name }}Update):
+    def update(self, id: int, model_update: WorkerUpdate):
         response = self._client.get_httpx_client().put(
             f"{self._url}/{id}",
             content=model_update.model_dump_json(),
             headers={"Content-Type": "application/json"},
         )
         raise_if_response_error(response)
-        return {{ class_name }}Public.model_validate(response.json())
+        return WorkerPublic.model_validate(response.json())
 
     def delete(self, id: int):
         response = self._client.get_httpx_client().delete(f"{self._url}/{id}")
         raise_if_response_error(response)
-{# A comment to ensure the last line has a newline character #}
