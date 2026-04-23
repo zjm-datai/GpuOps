@@ -275,10 +275,6 @@ class WorkerStatusStored(BaseModel):
         default=None
     )  # The machine ID of the worker, used for identifying the worker in the cluster
 
-    proxy_mode: Optional[ModelInstanceProxyModeEnum] = Field(
-        default=ModelInstanceProxyModeEnum.WORKER,
-    )
-
 class WorkerStatusPublic(WorkerStatusStored):
     pass
         
@@ -337,7 +333,7 @@ class WorkerPublic(
 
 class WorkerRegistrationPublic(WorkerPublic):
     token: str
-    worker_uuid: str
+    worker_uuid: str # type: ignore
     worker_config: Optional["PredefinedConfigNoDefaults"] = None
 
 WorkersPublic = PaginatedList[WorkerPublic]

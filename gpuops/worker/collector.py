@@ -54,7 +54,7 @@ class WorkerStatusCollector:
     
     """A class for collecting worker status information."""
     @time_decorator(log_slow_seconds=WORKER_STATUS_COLLECTION_LOG_SLOW_SECONDS)
-    def timed_collect(self, clientset: ClientSet = None, initial: bool = False):
+    def timed_collect(self, clientset: ClientSet = None, initial: bool = False): # type: ignore
         return self.collect(clientset=clientset, initial=initial)
 
     def collect(
@@ -93,6 +93,5 @@ class WorkerStatusCollector:
             state_message=state_message,
             status=status,
             worker_uuid=self._worker_uuid_getter(),
-            proxy_mode=self._cfg.proxy_mode,
         )
         
